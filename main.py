@@ -80,18 +80,16 @@ def _format_sentry(data: dict) -> str:
 
     # Issue alerts
     if isinstance(event, dict):
-        title = escape(event.get("title", "No title"))
-        project = escape(
-            data.get("data", {}).get("triggered_rule", "")
-            or data.get("project_name", data.get("project", ""))
-        )
+        metadata = event.get("metadata", {})
+        error_type = escape(metadata.get("type", event.get("title", "No title")))
+        error_value = escape(metadata.get("value", ""))
+        rule = escape(data.get("data", {}).get("triggered_rule", ""))
         url = event.get("web_url", data.get("url", ""))
-        level = event.get("level", "error")
-        parts = [f"<b>[{level.upper()}]</b> {title}"]
-        if project:
-            parts.append(f"Rule: {project}")
-        if url:
-            parts.append(f'<a href="{url}">View in Sentry</a>')
+        parts = [f'<b>{error_type}</b> (<a href="{url}">link</a>)' if url else f"<b>{error_type}</b>"]
+        if error_value:
+            parts.append(f"<i>{error_value}</i>")
+        if rule:
+            parts.append(rule)
         return "\n".join(parts)
 
     # Metric alerts
