@@ -7,6 +7,8 @@ import os
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(level=LOG_LEVEL)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 
 http_client: httpx.AsyncClient
@@ -26,6 +28,8 @@ app = FastAPI(lifespan=lifespan)
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+TELEGRAM_MAX_LENGTH = 4096
 
 
 @app.get("/health")
@@ -58,6 +62,8 @@ async def raw_webhook(req: Request):
 
 
 async def _send(text: str):
+    if len(text) > TELEGRAM_MAX_LENGTH:
+        text = text[: TELEGRAM_MAX_LENGTH - 1] + "\u2026"
     resp = await http_client.post(
         TELEGRAM_API,
         json={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"},
@@ -70,17 +76,22 @@ async def _send(text: str):
 
 
 def _format_sentry(data: dict) -> str:
+    event = data.get("data", {}).get("event", data.get("event"))
+
     # Issue alerts
-    if "event" in data:
-        title = escape(data.get("event", {}).get("title", "No title"))
-        project = escape(data.get("project_name", data.get("project", "")))
-        url = data.get("url", "")
-        level = data.get("event", {}).get("level", "error")
+    if isinstance(event, dict):
+        title = escape(event.get("title", "No title"))
+        project = escape(
+            data.get("data", {}).get("triggered_rule", "")
+            or data.get("project_name", data.get("project", ""))
+        )
+        url = event.get("web_url", data.get("url", ""))
+        level = event.get("level", "error")
         parts = [f"<b>[{level.upper()}]</b> {title}"]
         if project:
-            parts.append(f"Project: {project}")
+            parts.append(f"Rule: {project}")
         if url:
-            parts.append(f"<a href=\"{url}\">View in Sentry</a>")
+            parts.append(f'<a href="{url}">View in Sentry</a>')
         return "\n".join(parts)
 
     # Metric alerts
@@ -99,5 +110,5 @@ def _format_sentry(data: dict) -> str:
     # Fallback
     message = data.get("message") or data.get("text")
     if message:
-        return message
-    return str(data)
+        return escape(message)
+    return escape(str(data))[:TELEGRAM_MAX_LENGTH]
