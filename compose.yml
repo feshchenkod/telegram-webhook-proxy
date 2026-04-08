@@ -1,0 +1,9 @@
+services:
+  proxy:
+    image: ghcr.io/feshchenkod/telegram-webhook-proxy:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
