@@ -85,9 +85,9 @@ def _format_sentry(data: dict) -> str:
         error_value = escape(metadata.get("value", ""))
         rule = escape(data.get("data", {}).get("triggered_rule", ""))
         url = event.get("web_url", data.get("url", ""))
-        parts = [f'<b>{error_type}</b> (<a href="{url}">link</a>)' if url else f"<b>{error_type}</b>"]
+        parts = [f"{error_type} ({url})" if url else error_type]
         if error_value:
-            parts.append(f"<i>{error_value}</i>")
+            parts.append(f"<blockquote>{error_value}</blockquote>")
         if rule:
             parts.append(rule)
         return "\n".join(parts)
@@ -95,10 +95,10 @@ def _format_sentry(data: dict) -> str:
     # Metric alerts
     if "metric_alert" in data:
         alert = data["metric_alert"]
-        title = escape(alert.get("title", "Metric alert"))
-        status = escape(data.get("description_title", ""))
-        text = escape(data.get("description_text", ""))
-        parts = [f"<b>{title}</b>"]
+        title = alert.get("title", "Metric alert")
+        status = data.get("description_title", "")
+        text = data.get("description_text", "")
+        parts = [title]
         if status:
             parts.append(status)
         if text:
