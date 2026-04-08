@@ -85,7 +85,7 @@ def _format_sentry(data: dict) -> str:
         error_value = escape(metadata.get("value", ""))
         rule = escape(data.get("data", {}).get("triggered_rule", ""))
         url = event.get("web_url", data.get("url", ""))
-        parts = [f"{error_type} ({url})" if url else error_type]
+        parts = [f'<a href="{url}">{error_type}</a>' if url else error_type]
         if error_value:
             parts.append(f"<blockquote>{error_value}</blockquote>")
         if rule:
